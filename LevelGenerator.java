@@ -1,29 +1,18 @@
-package Interfaces.Implementations;
-
-import Interfaces.ILevelGenerator;
 import java.util.Random;
 public class LevelGenerator implements ILevelGenerator {
-    private Random rand;
+    private final Random rand;
 
-    @Override
-    public int[] GetRandomLevels(double alpha, int key, int size) {
-        rand = new Random();
-        var result = new int[size];
-        
-        for (int i = 0; i < size; i++) {
-            result[i] = generateEll(alpha, key);
-        }
-
-        return result;
+    public LevelGenerator() {
+      rand = new Random();
     }
-
+    
     @Override
     public int GetRandomLevel(double alpha, int key) {
       return generateEll(alpha, key);
     }
 
     private int generateEll(double alpha_, int key) {
-        int level = 0;
+        int level = 1;
         if (alpha_ >= 0. && alpha_< 1) {
           while (rand.nextDouble() < alpha_) {
               level += 1;
@@ -35,6 +24,7 @@ public class LevelGenerator implements ILevelGenerator {
             level += 1;
           }
         }
+
         return level;
     }
 }
