@@ -37,7 +37,9 @@ public class LinkedListElement {
 
     public void setAbove(LinkedListElement above) {
         this.above = above;
-        above.below = this;
+        if (above != null) {
+            above.below = this;
+        }
     }
 
     public LinkedListElement getBelow() {

@@ -1,38 +1,34 @@
-import Interfaces.ILevelGenerator;
-import Interfaces.IRandomListGenerator;
-import Interfaces.ISkipList;
-
 public class SkipList implements ISkipList {
     private LinkedListElement start;
     private int height;
-    private final int width;
+    private int width;
+
     private final double alpha;
-    private ILevelGenerator levelGenerator;
+    private final int key;
+    private final ILevelGenerator levelGenerator;
 
-    public SkipList(int size, IRandomListGenerator randomListGenerator, double alpha, int key, ILevelGenerator levelGenerator) {
-        var elements = randomListGenerator.GetRandomizedSortedList(size);
-        var levels = levelGenerator.GetRandomLevels(alpha, key, size);
-        this.levelGenerator = levelGenerator;
+    public SkipList(double alpha, int key, ILevelGenerator levelGenerator) {
         this.alpha = alpha;
-        width = levels.length;
+        this.key = key;
+        this.levelGenerator = levelGenerator;
 
-        start = new LinkedListElement(null, "-inf");
-
-        generateFirstRow(elements);
-        generateVertically(levels);
-        connectVertically(levels);
-        
-        setTrueStart();
+        height = 1;
+        width = 2;
+        start = new LinkedListElement(Integer.MIN_VALUE, "-inf");
+        start.setRight(new LinkedListElement(Integer.MAX_VALUE, "+inf"));
     }
 
+    @Override
     public LinkedListElement getStart() {
         return start;
     }
 
-    public int getMaxLevel() {
+    @Override
+    public int getHeight() {
         return height;
     }
 
+    @Override
     public int getWidth(){
         return width;
     }
@@ -42,7 +38,8 @@ public class SkipList implements ISkipList {
         var temp = start;
         while (temp.getBelow() != null) {
             temp = temp.getBelow();
-            while (k >= temp.getRight().getKey()) {
+
+            while (temp.getRight() != null && k >= temp.getRight().getKey()) {
                 temp = temp.getRight();
             }
         }
@@ -55,109 +52,71 @@ public class SkipList implements ISkipList {
         var p = skipSearch(k);
         LinkedListElement q = null;
         
-        var maxLvl = levelGenerator.GetRandomLevel(alpha, k);
-        var iter = 0;
-        var i = -1;
+        var maxLvl = levelGenerator.GetRandomLevel(alpha, key);
+        var i = 0;
         do {
             i += 1;
             if (i >= height) {
-                height += 1;
-            }
-        }
-        while (iter > maxLvl);
-
-        return null;
-    }
-
-    private void generateFirstRow(int[] elements) {   
-        var temp = start;
-        for (int i = 0; i < elements.length; i++) {
-            temp.setRight(new LinkedListElement(elements[i], null));
-            temp = temp.getRight();
-        }
-
-        temp.setRight(new LinkedListElement(null, "+inf"));
-    }
-
-    private void generateVertically(int[] levels) {
-        var horizontalTemp = start.getRight();
-        var max = levels[0];
-        var i = 0;
-        
-        // Generate vertically the real values
-        while (horizontalTemp.getKey() != null) {
-            if (max < levels[i]) {
-                max = levels[i];
-            }
-            
-            var verticalTemp = horizontalTemp;
-            for (int j = 0; j < levels[i]; j++) {
-                verticalTemp.setAbove(new LinkedListElement(horizontalTemp.getKey(), horizontalTemp.getValue()));
-                verticalTemp = verticalTemp.getAbove();
-            }
-
-            horizontalTemp = horizontalTemp.getRight();
-            i++;
-        }
-
-        height = max + 2;
-        // Generate vertically up the two sentinels
-        var tempStart = start;
-        for (int j = 0; j < height; j++) {
-            tempStart.setAbove(new LinkedListElement(tempStart.getKey(), tempStart.getValue()));
-            tempStart = tempStart.getAbove();
-
-            horizontalTemp.setAbove(new LinkedListElement(horizontalTemp.getKey(), horizontalTemp.getValue()));
-            horizontalTemp = horizontalTemp.getAbove();
-        }
-    }
-
-    private void connectVertically(int[] levels) {
-        var temp = start;
-        var i = 0;
-        while (temp.getRight() != null) {
-            if (temp.getAbove() != null || temp.getRight().getKey() == null) {
-                linkColumns(temp, temp.getRight(), levels, i);
-            }
-
-            temp = temp.getRight();
-            i++;
-        }
-    }
-
-    private void linkColumns(LinkedListElement curColumn, LinkedListElement interestedColumn, int[] levels, int startIndex) {
-        var tempFirstRow = interestedColumn;
-        var max = 0;
-        // levels.length + 1 is used to determine the sentinel column
-        for (int i = startIndex; i < levels.length + 1; i++) {
-            if (i == levels.length || max < levels[i]){
-                for(int j = 0; j < max; j++) {
-                    interestedColumn = interestedColumn.getAbove();
-                }
-            }
-
-            for (int j = max; (i == levels.length || j < levels[i]); j++) {
-                interestedColumn = interestedColumn.getAbove();
-                curColumn = curColumn.getAbove();
-                if (curColumn == null) {
-                    return;
-                }
+                height++;
+                var t = start.getRight();
                 
-                curColumn.setRight(interestedColumn);
+                // grow two sentinels
+                start = insertAfterAbove(null, start, start.getKey(), start.getValue());
+                insertAfterAbove(start, t, t.getKey(), t.getValue());
             }
 
-            if (i < levels.length && max < levels[i]) {
-                max = levels[i];
+            q = insertAfterAbove(p, q, k, val);
+            while (p.getAbove() == null) {
+                p = p.getLeft();
             }
 
-            tempFirstRow = tempFirstRow.getRight();
-            interestedColumn = tempFirstRow;
+            p = p.getAbove();
         }
+        while (i < maxLvl);
+        width++;
+
+        return q;
     }
 
-    private void setTrueStart() {
-        while (start.getAbove() != null) {
-            start = start.getAbove();
+    @Override
+    public LinkedListElement skipRemove(int k) {
+        var p = skipSearch(k);
+        if (p.getKey() != k || k == Integer.MIN_VALUE || k == Integer.MAX_VALUE) {
+            return null;
         }
+
+        var temp = p;
+        while (temp != null) {
+            var left = temp.getLeft();
+            var right = temp.getRight();
+            left.setRight(right);
+            temp = temp.getAbove();
+        }
+
+        // cut the tower if the level below of start is empty
+        if (start.getBelow().getRight().getRight() == null) {
+            start.setAbove(null);
+            start.getRight().setAbove(null);
+            height--;
+        }
+
+        width--;
+        return p;
+    }
+
+    private LinkedListElement insertAfterAbove(LinkedListElement afterPos, LinkedListElement abovePos, Integer key, String val){
+        var r = new LinkedListElement(key, val);
+        if (afterPos != null) {
+            var temp = afterPos.getRight();
+            afterPos.setRight(r);
+            if (temp != null) {
+                r.setRight(temp);
+            }
+        }
+
+        if (abovePos != null) {
+            abovePos.setAbove(r);
+        }
+        return r;
     }
 }

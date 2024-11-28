@@ -1,5 +1,3 @@
-import Interfaces.Implementations.LevelGenerator;
-import Interfaces.Implementations.RandomListGenerator;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -30,52 +28,67 @@ class MyEntry {
 
 //Class SkipListPQ
 class SkipListPQ {
-    private final double alpha;
-    private final Random rand;
+    private final ISkipList skipList;
 
     public SkipListPQ(double alpha) {
-        this.alpha = alpha;
-        this.rand = new Random();
+        this.skipList = new SkipList(alpha, 0, new LevelGenerator());
     }
 
     public int size() {
-	// TO BE COMPLETED  
-        return 0;     
+	    return skipList.getWidth();
     }
 
     public MyEntry min() {
-	// TO BE COMPLETED 
-        return new MyEntry(0,"");
+	    var minValPointer = skipList.getStart().getBelow();
+        if (minValPointer == null) {
+            return null;
+        }
+
+        var minVal = minValPointer.getRight().getKey();
+        minValPointer = skipList.skipSearch(minVal);
+        var result = "";
+        while (minValPointer.getKey() == minVal) {
+            result = minValPointer.getValue() + " " + result;
+            minValPointer = minValPointer.getLeft();
+        }
+
+        return new MyEntry(minVal,result);
     }
 
     public int insert(int key, String value) {
-	// TO BE COMPLETED 
+        skipList.skipInsert(key, value);
         return 0;
     }
 
-    private int generateEll(double alpha_ , int key) {
-        int level = 0;
-        if (alpha_ >= 0. && alpha_< 1) {
-          while (rand.nextDouble() < alpha_) {
-              level += 1;
-          }
-        }
-        else {
-          while (key != 0 && key % 2 == 0){
-            key = key / 2;
-            level += 1;
-          }
-        }
-        return level;
-    }
-
     public MyEntry removeMin() {
-	// TO BE COMPLETED 
-        return new MyEntry(0,"");
+        var min = min();
+        if (min == null) {
+            return null;
+        }
+
+        var removed = skipList.skipRemove(min.getKey());
+        return new MyEntry(removed.getKey(),removed.getValue());
     }
 
     public void print() {
-	// TO BE COMPLETED 
+        var horizontalTemp = skipList.getStart();
+        while (horizontalTemp.getAbove() != null) {
+            horizontalTemp = horizontalTemp.getAbove();
+        }
+
+        var result = new String[skipList.getWidth()];
+        var verticalTemp = horizontalTemp;
+        for (int i = 0; i < skipList.getWidth(); i++) {
+            var height = 0;
+            while (verticalTemp.getAbove() != null) {
+                height++;
+                verticalTemp = verticalTemp.getAbove();
+            }
+
+            result[i] = String.format("%d %s %d", verticalTemp.getKey(), verticalTemp.getValue(), height);
+        }
+
+        System.out.println(String.join(",", result));
     }
 }
 
@@ -85,54 +98,16 @@ public class TestProgram {
     public static void main(String[] args) {
         ////// MIRAS SRAZHOV TEST
         
-        var sl = new SkipList(10, new RandomListGenerator(), 0.5, 0, new LevelGenerator());
-        
-        var results = new Integer[sl.getMaxLevel()][sl.getWidth() + 2];
-        var temp = sl.getStart();
-        while (temp.getBelow() != null) {
-            temp = temp.getBelow();
-        }
+        // ShowInfoForPQ();
 
-        var horizontalTemp = temp;
-        for (Integer[] result : results) {
-            var j = -1;
-            while (horizontalTemp != null) {
-                if (horizontalTemp.getBelow() == null){   
-                    j++;
-                }
-                else {
-                    for (int i = 0; i < results[0].length; i++) {
-                        if (results[0][i] == (horizontalTemp.getKey() == null ? 9999 : horizontalTemp.getKey())) {
-                            j = i;
-                            break;
-                        }
-                    }
-                }
+        //ShowInfoForSkipList();
 
-                result[j] = horizontalTemp.getKey() == null ? 9999 : horizontalTemp.getKey();
-                horizontalTemp = horizontalTemp.getRight();
-            }
-
-            result[sl.getWidth() + 1] = 9999;
-            temp = temp.getAbove();
-            horizontalTemp = temp;
-        }
-
-        System.out.println();
-        for (Integer[] result : results) {
-            System.out.println();
-            for (Integer i : result) {
-                var res = i == null ? " - " : (" " + i.toString() + " ");
-                System.out.print(" " + res + " ");
-            }
-        }
-        
         if (true) {
-            return;
+            //return;
         }
 
         ////// MIRAS SRAZHOV TEST
-        
+        args = new String[] { "alphaEfficiencyTest/alphaEfficiencyTest_10K_2.txt" };
         if (args.length != 1) {
             System.out.println("Usage: java TestProgram <file_path>");
             return;
@@ -152,24 +127,93 @@ public class TestProgram {
 
                 switch (operation) {
                     case 0:
-			// TO BE COMPLETED 
+                        var min = skipList.min();
+                        //System.out.println("minVal: " + min);
                         break;
                     case 1:
-			// TO BE COMPLETED 
+                        min = skipList.removeMin();
+                        //System.out.println("removed minVal: " + min.getKey().toString());
                         break;
                     case 2:
-			// TO BE COMPLETED 
+                        var k = Integer.parseInt(line[1]);
+                        var v = line[2];
+                        skipList.insert(k, v);
                         break;
                     case 3:
-			// TO BE COMPLETED 
+                        skipList.print();
                         break;
                     default:
                         System.out.println("Invalid operation code");
                         return;
                 }
             }
+
+            System.out.println("Program is finished");
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
+    }
+
+    private static void ShowInfoForPQ() {
+        var pq = new SkipListPQ(0.5);
+        
+        var elements = GetRandomizedList(10);
+        for (var elem : elements) {
+            pq.insert(elem, String.valueOf(elem));
+        }
+        
+        pq.insert(pq.min().getKey(), "anotherVal");
+    }
+
+    public static void ShowInfoForSkipList(ISkipList sl) { 
+        var results = new String[sl.getHeight()][sl.getWidth()];
+        var temp = sl.getStart();
+        while (temp.getBelow() != null) {
+            temp = temp.getBelow();
+        }
+
+        var horizontalTemp = temp;
+        for (String[] result : results) {
+            var j = -1;
+            while (horizontalTemp != null) {
+                if (horizontalTemp.getBelow() == null){   
+                    j++;
+                }
+                else {
+                    for (int i = 0; i < results[0].length; i++) {
+                        var intVal = Integer.parseInt(results[0][i].split("/")[0]); 
+                        if (intVal == horizontalTemp.getKey()) {
+                            j = i;
+                            break;
+                        }
+                    }
+                }
+
+                result[j] = horizontalTemp.getKey() + "/" + String.valueOf(horizontalTemp.getValue());
+                horizontalTemp = horizontalTemp.getRight();
+            }
+
+            temp = temp.getAbove();
+            horizontalTemp = temp;
+        }
+
+        System.out.println();
+        for (String[] result : results) {
+            System.out.println();
+            for (String i : result) {
+                var res = i == null ? " —— " : (" " + i + " ");
+                System.out.print(" " + res + " ");
+            }
+        }
+    }
+
+    private static int[] GetRandomizedList(int size) {
+        var rand = new Random();
+        var result = new int[size];
+        for (int i = 0; i < size; i++) {
+            result[i] = rand.nextInt(50);
+        }
+
+        return result;
     }
 }
