@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
 
 //Class my entry
 class MyEntry {
@@ -31,83 +30,85 @@ class SkipListPQ {
     private final ISkipList skipList;
 
     public SkipListPQ(double alpha) {
-        this.skipList = new SkipList(alpha, 0, new LevelGenerator());
+        this.skipList = new SkipList(alpha, new LevelGenerator());
     }
 
     public int size() {
-	    return skipList.getWidth();
+	    return skipList.getWidth() - 2;
     }
 
     public MyEntry min() {
-	    var minValPointer = skipList.getStart().getBelow();
-        if (minValPointer == null) {
+        var minVal = getMinKey();
+        if (minVal == null) {
             return null;
         }
 
-        var minVal = minValPointer.getRight().getKey();
-        minValPointer = skipList.skipSearch(minVal);
+        var minValPointer = skipList.skipSearch(minVal);
         var result = "";
-        while (minValPointer.getKey() == minVal) {
+        while (minValPointer.getKey() != null && minValPointer.getKey().intValue() == minVal) {
             result = minValPointer.getValue() + " " + result;
             minValPointer = minValPointer.getLeft();
         }
 
-        return new MyEntry(minVal,result);
+        return new MyEntry(minVal, result);
     }
 
     public int insert(int key, String value) {
-        skipList.skipInsert(key, value);
-        return 0;
+        return skipList.skipInsert(key, value);
     }
 
     public MyEntry removeMin() {
-        var min = min();
+        var min = getMinKey();
         if (min == null) {
             return null;
         }
 
-        var removed = skipList.skipRemove(min.getKey());
-        return new MyEntry(removed.getKey(),removed.getValue());
+        var removed = skipList.skipRemove(min);
+        return new MyEntry(removed.getKey(), removed.getValue());
     }
 
     public void print() {
         var horizontalTemp = skipList.getStart();
-        while (horizontalTemp.getAbove() != null) {
-            horizontalTemp = horizontalTemp.getAbove();
+        while (horizontalTemp.getBelow() != null) {
+            horizontalTemp = horizontalTemp.getBelow();
         }
 
-        var result = new String[skipList.getWidth()];
-        var verticalTemp = horizontalTemp;
-        for (int i = 0; i < skipList.getWidth(); i++) {
-            var height = 0;
+        horizontalTemp = horizontalTemp.getRight();
+        var result = new String[skipList.getWidth() - 2];
+        for (int i = 0; i < skipList.getWidth() - 2; i++) {
+            var verticalTemp = horizontalTemp;
+            var height = 1;
             while (verticalTemp.getAbove() != null) {
                 height++;
                 verticalTemp = verticalTemp.getAbove();
             }
 
             result[i] = String.format("%d %s %d", verticalTemp.getKey(), verticalTemp.getValue(), height);
+            horizontalTemp = horizontalTemp.getRight();
         }
 
-        System.out.println(String.join(",", result));
+        System.out.println(String.join(", ", result));
+    }
+
+    private Integer getMinKey() {
+        var minValPointer = skipList.getStart();
+        while (minValPointer.getBelow() != null) {
+            minValPointer = minValPointer.getBelow();
+        }
+
+        if (minValPointer.getRight().getKey() == null) {
+            return null;
+        }
+
+        return minValPointer.getRight().getKey();
     }
 }
 
 //TestProgram
-
 public class TestProgram {
     public static void main(String[] args) {
-        ////// MIRAS SRAZHOV TEST
-        
-        // ShowInfoForPQ();
-
-        //ShowInfoForSkipList();
-
-        if (true) {
-            //return;
-        }
-
-        ////// MIRAS SRAZHOV TEST
-        args = new String[] { "alphaEfficiencyTest/alphaEfficiencyTest_10K_2.txt" };
+        args = new String[] { "alphaEfficiencyTest/alphaEfficiencyTest_100K_2.txt" };
+        // args = new String[] { "IO_FILES/input_example_2.txt" };
         if (args.length != 1) {
             System.out.println("Usage: java TestProgram <file_path>");
             return;
@@ -121,48 +122,40 @@ public class TestProgram {
 
             SkipListPQ skipList = new SkipListPQ(alpha);
 
+            var insertsCount = 0;
+            var sumOfNodesTraversed = 0;
             for (int i = 0; i < N; i++) {
                 String[] line = br.readLine().split(" ");
                 int operation = Integer.parseInt(line[0]);
 
                 switch (operation) {
-                    case 0:
+                    case 0 -> {
                         var min = skipList.min();
-                        //System.out.println("minVal: " + min);
-                        break;
-                    case 1:
-                        min = skipList.removeMin();
-                        //System.out.println("removed minVal: " + min.getKey().toString());
-                        break;
-                    case 2:
+                        System.out.println(min);
+                    }
+                    case 1 -> {
+                        var min = skipList.removeMin();
+                        System.out.println(min.toString());
+                    }
+                    case 2 -> {
                         var k = Integer.parseInt(line[1]);
                         var v = line[2];
-                        skipList.insert(k, v);
-                        break;
-                    case 3:
-                        skipList.print();
-                        break;
-                    default:
+                        sumOfNodesTraversed += skipList.insert(k, v);
+                        insertsCount++;
+                    }
+                    case 3 -> skipList.print();
+                    default -> {
                         System.out.println("Invalid operation code");
                         return;
+                    }
                 }
             }
 
-            System.out.println("Program is finished");
+            var average = Double.toString((double)(sumOfNodesTraversed/insertsCount));
+            System.out.println(String.format("%,.2f %d %d %s", alpha, skipList.size(), insertsCount, average));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
-    }
-
-    private static void ShowInfoForPQ() {
-        var pq = new SkipListPQ(0.5);
-        
-        var elements = GetRandomizedList(10);
-        for (var elem : elements) {
-            pq.insert(elem, String.valueOf(elem));
-        }
-        
-        pq.insert(pq.min().getKey(), "anotherVal");
     }
 
     public static void ShowInfoForSkipList(ISkipList sl) { 
@@ -205,15 +198,5 @@ public class TestProgram {
                 System.out.print(" " + res + " ");
             }
         }
-    }
-
-    private static int[] GetRandomizedList(int size) {
-        var rand = new Random();
-        var result = new int[size];
-        for (int i = 0; i < size; i++) {
-            result[i] = rand.nextInt(50);
-        }
-
-        return result;
     }
 }

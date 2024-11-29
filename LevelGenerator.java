@@ -7,7 +7,7 @@ public class LevelGenerator implements ILevelGenerator {
     }
     
     @Override
-    public int GetRandomLevel(double alpha, int key) {
+    public int getRandomLevel(double alpha, int key) {
       return generateEll(alpha, key);
     }
 
@@ -18,7 +18,7 @@ public class LevelGenerator implements ILevelGenerator {
               level += 1;
           }
         }
-        else{
+        else {
           while (key != 0 && key % 2 == 0){
             key = key / 2;
             level += 1;

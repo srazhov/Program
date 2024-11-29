@@ -1,3 +1,3 @@
 public interface ILevelGenerator {
-    int GetRandomLevel(double alpha, int key);
+    int getRandomLevel(double alpha, int key);
 }

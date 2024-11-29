@@ -4,18 +4,16 @@ public class SkipList implements ISkipList {
     private int width;
 
     private final double alpha;
-    private final int key;
     private final ILevelGenerator levelGenerator;
 
-    public SkipList(double alpha, int key, ILevelGenerator levelGenerator) {
+    public SkipList(double alpha, ILevelGenerator levelGenerator) {
         this.alpha = alpha;
-        this.key = key;
         this.levelGenerator = levelGenerator;
 
         height = 1;
         width = 2;
-        start = new LinkedListElement(Integer.MIN_VALUE, "-inf");
-        start.setRight(new LinkedListElement(Integer.MAX_VALUE, "+inf"));
+        start = new LinkedListElement(null, "-inf");
+        start.setRight(new LinkedListElement(null, "+inf"));
     }
 
     @Override
@@ -35,24 +33,32 @@ public class SkipList implements ISkipList {
 
     @Override
     public LinkedListElement skipSearch(int k) {
+        return skipSearchWithInfo(k).pointer;
+    }
+
+    private MyValues skipSearchWithInfo(int k) {
         var temp = start;
+        var nodesTraversed = 1;
         while (temp.getBelow() != null) {
             temp = temp.getBelow();
+            nodesTraversed++;
 
-            while (temp.getRight() != null && k >= temp.getRight().getKey()) {
+            while (temp.getRight().getKey() != null && k >= temp.getRight().getKey()) {
+                nodesTraversed++;
                 temp = temp.getRight();
             }
         }
 
-        return temp;
+        return new MyValues(temp, nodesTraversed);
     }
 
     @Override
-    public LinkedListElement skipInsert(int k, String val) {
-        var p = skipSearch(k);
+    public int skipInsert(int k, String val) {
+        var skipSearchInfo = skipSearchWithInfo(k);
+        var p = skipSearchInfo.pointer;
         LinkedListElement q = null;
         
-        var maxLvl = levelGenerator.GetRandomLevel(alpha, key);
+        var maxLvl = levelGenerator.getRandomLevel(alpha, k);
         var i = 0;
         do {
             i += 1;
@@ -75,13 +81,13 @@ public class SkipList implements ISkipList {
         while (i < maxLvl);
         width++;
 
-        return q;
+        return skipSearchInfo.nodesTraversed;
     }
 
     @Override
     public LinkedListElement skipRemove(int k) {
         var p = skipSearch(k);
-        if (p.getKey() != k || k == Integer.MIN_VALUE || k == Integer.MAX_VALUE) {
+        if (p.getKey() != k) {
             return null;
         }
 
@@ -94,9 +100,10 @@ public class SkipList implements ISkipList {
         }
 
         // cut the tower if the level below of start is empty
-        if (start.getBelow().getRight().getRight() == null) {
-            start.setAbove(null);
-            start.getRight().setAbove(null);
+        while (start.getBelow().getRight().getKey() == null) {
+            start.getBelow().getRight().setAbove(null);
+            start.getBelow().setAbove(null);
+            start = start.getBelow();
             height--;
         }
 
@@ -118,5 +125,15 @@ public class SkipList implements ISkipList {
             abovePos.setAbove(r);
         }
         return r;
+    }
+
+    private class MyValues {
+        public LinkedListElement pointer;
+        public int nodesTraversed;
+    
+        public MyValues(LinkedListElement pointer, int nodesTraversed) {
+            this.nodesTraversed = nodesTraversed;
+            this.pointer = pointer;
+        }
     }
 }
