@@ -96,10 +96,6 @@ class SkipListPQ {
             minValPointer = minValPointer.getBelow();
         }
 
-        if (minValPointer.getRight().getKey() == null) {
-            return null;
-        }
-
         return minValPointer.getRight().getKey();
     }
 }
@@ -107,8 +103,6 @@ class SkipListPQ {
 //TestProgram
 public class TestProgram {
     public static void main(String[] args) {
-        args = new String[] { "alphaEfficiencyTest/alphaEfficiencyTest_100K_2.txt" };
-        // args = new String[] { "IO_FILES/input_example_2.txt" };
         if (args.length != 1) {
             System.out.println("Usage: java TestProgram <file_path>");
             return;
@@ -123,7 +117,7 @@ public class TestProgram {
             SkipListPQ skipList = new SkipListPQ(alpha);
 
             var insertsCount = 0;
-            var sumOfNodesTraversed = 0;
+            long sumOfNodesTraversed = 0;
             for (int i = 0; i < N; i++) {
                 String[] line = br.readLine().split(" ");
                 int operation = Integer.parseInt(line[0]);
@@ -140,7 +134,10 @@ public class TestProgram {
                     case 2 -> {
                         var k = Integer.parseInt(line[1]);
                         var v = line[2];
-                        sumOfNodesTraversed += skipList.insert(k, v);
+                        
+                        // Throws an exception in case of overflow 
+                        var nodesTraversed = skipList.insert(k, v);
+                        sumOfNodesTraversed = Math.addExact(sumOfNodesTraversed, nodesTraversed);
                         insertsCount++;
                     }
                     case 3 -> skipList.print();
@@ -155,48 +152,6 @@ public class TestProgram {
             System.out.println(String.format("%,.2f %d %d %s", alpha, skipList.size(), insertsCount, average));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
-        }
-    }
-
-    public static void ShowInfoForSkipList(ISkipList sl) { 
-        var results = new String[sl.getHeight()][sl.getWidth()];
-        var temp = sl.getStart();
-        while (temp.getBelow() != null) {
-            temp = temp.getBelow();
-        }
-
-        var horizontalTemp = temp;
-        for (String[] result : results) {
-            var j = -1;
-            while (horizontalTemp != null) {
-                if (horizontalTemp.getBelow() == null){   
-                    j++;
-                }
-                else {
-                    for (int i = 0; i < results[0].length; i++) {
-                        var intVal = Integer.parseInt(results[0][i].split("/")[0]); 
-                        if (intVal == horizontalTemp.getKey()) {
-                            j = i;
-                            break;
-                        }
-                    }
-                }
-
-                result[j] = horizontalTemp.getKey() + "/" + String.valueOf(horizontalTemp.getValue());
-                horizontalTemp = horizontalTemp.getRight();
-            }
-
-            temp = temp.getAbove();
-            horizontalTemp = temp;
-        }
-
-        System.out.println();
-        for (String[] result : results) {
-            System.out.println();
-            for (String i : result) {
-                var res = i == null ? " —— " : (" " + i + " ");
-                System.out.print(" " + res + " ");
-            }
         }
     }
 }
