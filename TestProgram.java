@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Locale;
 
 //Class my entry
 class MyEntry {
@@ -50,7 +51,7 @@ class SkipListPQ {
             minValPointer = minValPointer.getLeft();
         }
 
-        return new MyEntry(minVal, result);
+        return new MyEntry(minVal, result.trim());
     }
 
     public int insert(int key, String value) {
@@ -128,15 +129,14 @@ public class TestProgram {
                         System.out.println(min);
                     }
                     case 1 -> {
-                        var min = skipList.removeMin();
-                        System.out.println(min.toString());
+                        skipList.removeMin();
                     }
                     case 2 -> {
                         var k = Integer.parseInt(line[1]);
                         var v = line[2];
                         
-                        // Throws an exception in case of overflow 
                         var nodesTraversed = skipList.insert(k, v);
+                        // Throws an exception in case of overflow 
                         sumOfNodesTraversed = Math.addExact(sumOfNodesTraversed, nodesTraversed);
                         insertsCount++;
                     }
@@ -148,8 +148,9 @@ public class TestProgram {
                 }
             }
 
-            var average = Double.toString((double)(sumOfNodesTraversed/insertsCount));
-            System.out.println(String.format("%,.2f %d %d %s", alpha, skipList.size(), insertsCount, average));
+            var average =(double)(sumOfNodesTraversed/insertsCount);
+            var usLoc = new Locale("en", "us");
+            System.out.println(String.format(usLoc, "%.2f %d %d %.2f", alpha, skipList.size(), insertsCount, average));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
